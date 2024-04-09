@@ -41,17 +41,22 @@ func handleRequest(c net.Conn) {
 
 	var res []byte
 
-	if !strings.HasPrefix(reqPath, "/echo/") {
-		res = []byte("HTTP/1.1 404 Not Found\r\n\r\n")
+	if reqPath == "/" {
+		res = []byte("HTTP/1.1 200 OK\r\n\r\n")
 		c.Write(res)
 		return
 	}
 
-	randStr := reqPath[6:]
-	res = []byte("HTTP/1.1 200 OK\r\n")
-	res = append(res, []byte("Content-Type: text/plain\r\n")...)
-	res = append(res, []byte(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(randStr)))...)
-	res = append(res, []byte(randStr)...)
+	if strings.HasPrefix(reqPath, "/echo/") {
+		randStr := reqPath[6:]
+		res = []byte("HTTP/1.1 200 OK\r\n")
+		res = append(res, []byte("Content-Type: text/plain\r\n")...)
+		res = append(res, []byte(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(randStr)))...)
+		res = append(res, []byte(randStr)...)
+		c.Write(res)
+		return
+	}
 
+	res = []byte("HTTP/1.1 404 Not Found\r\n\r\n")
 	c.Write(res)
 }

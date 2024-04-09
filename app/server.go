@@ -40,10 +40,18 @@ func handleRequest(c net.Conn) {
 	reqPath := strings.Split(string(req), " ")[1]
 
 	var res []byte
-	if reqPath == "/" {
-		res = []byte("HTTP/1.1 200 OK\r\n\r\nOk")
-	} else {
-		res = []byte("HTTP/1.1 404 Not Found\r\n\r\nNot found")
+
+	if !strings.HasPrefix(reqPath, "/echo/") {
+		res = []byte("HTTP/1.1 404 Not Found\r\n\r\n")
+		c.Write(res)
+		return
 	}
+
+	randStr := reqPath[6:]
+	res = []byte("HTTP/1.1 200 OK\r\n")
+	res = append(res, []byte("Content-Type: text/plain\r\n")...)
+	res = append(res, []byte(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(randStr)))...)
+	res = append(res, []byte(randStr)...)
+
 	c.Write(res)
 }

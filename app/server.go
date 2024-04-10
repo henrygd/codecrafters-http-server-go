@@ -1,13 +1,18 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
 	"strings"
 )
 
+var directory = flag.String("directory", "/tmp", "a string")
+
 func main() {
+	flag.Parse()
+
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
 		fmt.Println("Failed to bind to port 4221")
@@ -55,6 +60,17 @@ func handleRequest(c net.Conn) {
 		splitReq := strings.Split(reqString, "User-Agent: ")
 		agent := strings.Split(splitReq[1], "\r\n")[0]
 		c.Write(createResponse("text/plain", agent))
+		return
+	}
+
+	if strings.HasPrefix(reqPath, "/files/") {
+		filename := reqPath[7:]
+		fileContent, err := os.ReadFile(strings.TrimSuffix(*directory, "/") + "/" + filename)
+		if err != nil {
+			c.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+		c.Write(createResponse("application/octet-stream", string(fileContent)))
 		return
 	}
 

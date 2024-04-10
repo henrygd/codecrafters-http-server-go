@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -65,13 +66,36 @@ func handleRequest(c net.Conn) {
 
 	if strings.HasPrefix(reqPath, "/files/") {
 		filename := reqPath[7:]
-		fileContent, err := os.ReadFile(strings.TrimSuffix(*directory, "/") + "/" + filename)
-		if err != nil {
-			c.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		dir := strings.TrimSuffix(*directory, "/") + "/"
+		// GET /files
+		if strings.HasPrefix(reqString, "GET") {
+			fileContent, err := os.ReadFile(dir + filename)
+			if err != nil {
+				c.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+				return
+			}
+			c.Write(createResponse("application/octet-stream", string(fileContent)))
 			return
 		}
-		c.Write(createResponse("application/octet-stream", string(fileContent)))
-		return
+		// POST /files
+		if strings.HasPrefix(reqString, "POST") {
+			splitReq := strings.Split(reqString, "Content-Length: ")
+			y := strings.Split(splitReq[1], "\r\n")[0]
+			contentLength, err := strconv.Atoi(y)
+			if err != nil {
+				c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n\r\n"))
+				return
+			}
+			bodyStart := strings.Index(reqString, "\r\n\r\n") + 4
+			bodyContent := reqString[bodyStart : bodyStart+contentLength]
+			err = os.WriteFile(dir+filename, []byte(bodyContent), 0644)
+			if err != nil {
+				c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n\r\n"))
+				return
+			}
+			c.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
+			return
+		}
 	}
 
 	c.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))

@@ -37,26 +37,34 @@ func handleRequest(c net.Conn) {
 		fmt.Println("Error reading request: ", err.Error())
 		os.Exit(1)
 	}
-	reqPath := strings.Split(string(req), " ")[1]
-
-	var res []byte
+	reqString := string(req)
+	reqPath := strings.Split(reqString, " ")[1]
 
 	if reqPath == "/" {
-		res = []byte("HTTP/1.1 200 OK\r\n\r\n")
-		c.Write(res)
+		c.Write(createResponse("text/plain", "Hello"))
 		return
 	}
 
 	if strings.HasPrefix(reqPath, "/echo/") {
 		randStr := reqPath[6:]
-		res = []byte("HTTP/1.1 200 OK\r\n")
-		res = append(res, []byte("Content-Type: text/plain\r\n")...)
-		res = append(res, []byte(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(randStr)))...)
-		res = append(res, []byte(randStr)...)
-		c.Write(res)
+		c.Write(createResponse("text/plain", randStr))
 		return
 	}
 
-	res = []byte("HTTP/1.1 404 Not Found\r\n\r\n")
-	c.Write(res)
+	if strings.HasPrefix(reqPath, "/user-agent") {
+		splitReq := strings.Split(reqString, "User-Agent: ")
+		agent := strings.Split(splitReq[1], "\r\n")[0]
+		c.Write(createResponse("text/plain", agent))
+		return
+	}
+
+	c.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+}
+
+func createResponse(contentType string, content string) []byte {
+	res := []byte("HTTP/1.1 200 OK\r\n")
+	res = append(res, []byte(fmt.Sprintf("Content-Type: %s\r\n", contentType))...)
+	res = append(res, []byte(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(content)))...)
+	res = append(res, []byte(content)...)
+	return res
 }

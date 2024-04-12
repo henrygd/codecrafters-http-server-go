@@ -37,13 +37,13 @@ func main() {
 func handleRequest(c net.Conn) {
 	defer c.Close()
 
-	req := make([]byte, 1024)
-	_, err := c.Read(req)
+	buf := make([]byte, 1024)
+	reqLength, err := c.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading request: ", err.Error())
 		os.Exit(1)
 	}
-	reqString := string(req)
+	reqString := string(buf[0:reqLength])
 	reqPath := strings.Split(reqString, " ")[1]
 
 	if reqPath == "/" {
@@ -86,8 +86,7 @@ func handleRequest(c net.Conn) {
 				c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n\r\n"))
 				return
 			}
-			bodyStart := strings.Index(reqString, "\r\n\r\n") + 4
-			bodyContent := reqString[bodyStart : bodyStart+contentLength]
+			bodyContent := reqString[reqLength-contentLength : reqLength]
 			err = os.WriteFile(dir+filename, []byte(bodyContent), 0644)
 			if err != nil {
 				c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n\r\n"))
